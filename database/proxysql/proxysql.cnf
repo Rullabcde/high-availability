@@ -1,0 +1,14 @@
+datadir="/var/lib/proxysql"
+admin_variables=
+{
+    admin_credentials="admin:admin"
+}
+mysql_variables=
+{
+    connect_timeout_server=3000
+    monitor_username="monitor"
+    monitor_password="monitor"
+    monitor_connect_timeout=1000
+    monitor_ping_timeout=1000
+    monitor_read_only_max_timeout_count=5
+}

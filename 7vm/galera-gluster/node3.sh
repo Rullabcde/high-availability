@@ -1,11 +1,16 @@
 #!/bin/bash
 
+# Update Repositories
 apt update && apt upgrade -y
+
+# Install Required Packages
 apt install chrony -y
 cat <<EOF > /etc/chrony/chrony.conf
 server time.google.com iburst
 EOF
 systemctl restart chrony
+
+# Install Galera Cluster
 apt install curl gnupg -y
 curl -LsS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | sudo bash -s -- --mariadb-server-version=10.6
 apt update
@@ -25,8 +30,8 @@ wsrep_cluster_address="gcomm://node1,node2,node3"
 
 wsrep_sst_method=rsync
 
-wsrep_node_address="node2"
-wsrep_node_name="mariadb2"
+wsrep_node_address="node3"
+wsrep_node_name="mariadb3"
 EOF
 
 sed -i 's/^bind-address\s*=.*/bind-address = 0.0.0.0/' /etc/mysql/mariadb.conf.d/50-server.cnf
@@ -34,6 +39,7 @@ systemctl stop mariadb
 systemctl start mariadb
 mysql -u root -prullabcd -e "SHOW STATUS LIKE 'wsrep_cluster_size'"
 
+# Install GlusterFS
 apt install glusterfs-server -y
 systemctl enable --now glusterd
 fdisk /dev/sdb

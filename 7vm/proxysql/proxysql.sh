@@ -1,6 +1,9 @@
 #!/bin/bash
 
+# Update Repositories
 apt update && apt upgrade -y
+
+# Install ProxySQL
 apt install -y lsb-release wget apt-transport-https ca-certificates gnupg
 wget -O /usr/share/keyrings/proxysql-2.6.x-keyring.gpg \
   'https://repo.proxysql.com/ProxySQL/proxysql-2.6.x/repo_pub_key.gpg'
@@ -50,6 +53,8 @@ systemctl stop proxysql
 rm -rf /var/lib/proxysql/proxysql.db
 systemctl start proxysql
 systemctl enable proxysql
+
+# Configure ProxySQL
 apt install -y mariadb-client
 mysql -uadmin -padmin -h127.0.0.1 -P6032
 SELECT * FROM mysql_users;
