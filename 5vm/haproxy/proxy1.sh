@@ -1,23 +1,39 @@
 #!/bin/bash
+set -e
 
-# Update Repositories
 apt update && apt upgrade -y
 
 # Install HAProxy
-apt install haproxy -y
-rm -rf /etc/haproxy/haproxy.cfg
+apt install -y haproxy
+rm -f /etc/haproxy/haproxy.cfg
+
 cat <<EOF > /etc/haproxy/haproxy.cfg
+global
+    log /dev/log local0
+    chroot /var/lib/haproxy
+    stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+    stats timeout 30s
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log global
+    mode http
+    option httplog
+    option dontlognull
+    timeout connect 5s
+    timeout client 30s
+    timeout server 30s
+
 frontend http_front
     bind *:80
     default_backend http_back
-    timeout client 30s
 
 backend http_back
     balance roundrobin
-    server web1 ip-app:8081 check
-    server web2 ip-app:8082 check
-    timeout connect 10s
-    timeout server 30s
+    server web1 app1:80 check
+    server web2 app2:80 check
 
 listen monitoring
     bind *:8080
@@ -28,28 +44,18 @@ listen monitoring
     stats show-node
     stats auth admin:admin
     stats uri /monitoring
-    timeout connect 10s
-    timeout client 30s
-    timeout server 30s
 EOF
 
 systemctl enable haproxy
 systemctl start haproxy
 
 # Install Keepalived
-apt install keepalived -y
-apt install build-essential libssl-dev
-cd ~
-wget http://www.keepalived.org/software/keepalived-1.2.19.tar.gz
-tar xzvf keepalived*
-cd keepalived*
-./configure
-make
-make install
+apt install -y keepalived build-essential libssl-dev
+
 cat <<EOF > /etc/keepalived/keepalived.conf
 global_defs {
     enable_script_security
-    router_id HAPROXY_2
+    router_id HAPROXY_1
 }
 
 vrrp_script chk_haproxy {
@@ -62,26 +68,22 @@ vrrp_script chk_haproxy {
 }
 
 vrrp_instance VI_1 {
-    state BACKUP
+    state MASTER
     interface ens18
     virtual_router_id 101
-    priority 100
+    priority 110
     advert_int 1
-
     authentication {
         auth_type PASS
         auth_pass nginx123
     }
-
-    unicast_src_ip ip-mesin
+    unicast_src_ip YOUR_IP_HERE
     unicast_peer {
-        ip-pasangan
+        PEER_IP_HERE
     }
-
     virtual_ipaddress {
-        ip-virtual
+        VIRTUAL_IP_HERE
     }
-
     track_script {
         chk_haproxy
     }

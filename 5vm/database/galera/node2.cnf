@@ -4,17 +4,13 @@ default-storage-engine=innodb
 innodb_autoinc_lock_mode=2
 bind-address=0.0.0.0
 
-# Galera Provider Configuration
 wsrep_on=ON
 wsrep_provider=/usr/lib/galera/libgalera_smm.so
 
-# Galera Cluster Configuration
 wsrep_cluster_name="test_cluster"
 wsrep_cluster_address="gcomm://db1,db2,db3"
 
-# Galera Synchronization Configuration
 wsrep_sst_method=rsync
 
-# Galera Node Configuration
-wsrep_node_address="db3"
-wsrep_node_name="mariadb3"
+wsrep_node_address="db2"
+wsrep_node_name="mariadb2"

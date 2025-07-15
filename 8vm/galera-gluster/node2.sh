@@ -1,20 +1,23 @@
 #!/bin/bash
+set -e
 
-# Update Repositories
+# Update system
 apt update && apt upgrade -y
 
-# Install Required Packages
-apt install chrony -y
-cat <<EOF > /etc/chrony/chrony.conf
-server time.google.com iburst
-EOF
+# Install Chrony
+apt install -y chrony
+echo "server time.google.com iburst" > /etc/chrony/chrony.conf
 systemctl restart chrony
 
-# Install Galera Cluster
-apt install curl gnupg -y
-curl -LsS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | sudo bash -s -- --mariadb-server-version=10.6
+# MariaDB Repo Setup
+apt install -y curl gnupg
+curl -LsS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup  | sudo bash -s -- --mariadb-server-version=10.6
 apt update
-apt install mariadb-server -y
+
+# Install MariaDB Galera
+apt install -y mariadb-server galera-4
+
+# Configure Galera
 cat <<EOF > /etc/mysql/conf.d/galera.cnf
 [mysqld]
 binlog_format=ROW
@@ -30,21 +33,32 @@ wsrep_cluster_address="gcomm://node1,node2,node3"
 
 wsrep_sst_method=rsync
 
-wsrep_node_address="node2"
+wsrep_node_ADDRESS="node2"
 wsrep_node_name="mariadb2"
 EOF
 
 sed -i 's/^bind-address\s*=.*/bind-address = 0.0.0.0/' /etc/mysql/mariadb.conf.d/50-server.cnf
-systemctl stop mariadb
+
+# Start MariaDB
 systemctl start mariadb
-mysql -u root -prullabcd -e "SHOW STATUS LIKE 'wsrep_cluster_size'"
+systemctl enable mariadb
 
 # Install GlusterFS
-apt install glusterfs-server -y
-systemctl enable --now glusterd
-fdisk /dev/sdb
-mkfs.xfs /dev/sdb1
+apt install -y glusterfs-server
+systemctl enable glusterd --now
+
+# Format disk
+fdisk /dev/sdb <<EOF
+n
+p
+1
+
+
+t
+7
+w
+EOF
+mkfs.xfs /dev/sdb1 || true
 mkdir -p /gluster
 mount /dev/sdb1 /gluster
-gluster pool list
 mkdir -p /gluster/wp-shared
